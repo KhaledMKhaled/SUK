@@ -1,0 +1,332 @@
+You are a senior full-stack developer.  
+I want you to build a **complete Django web app** (Python + Django + HTML templates + Bootstrap) connected to a relational database (SQLite or PostgreSQL) **with full UTF-8 support for Arabic and English text**.
+
+The app is for a clothing brand to manage product coding (SKU) for menswear in the Egyptian market.
+
+====================================================
+## 1) General requirements
+====================================================
+
+- Use: Python 3.x, Django (latest stable), SQLite database (default) with full Unicode / UTF-8 support.  
+- Use Django templates + Bootstrap 5 for a simple, clean UI.
+- All pages and forms must support Arabic labels and Arabic content.
+- Set `<meta charset="UTF-8">` in the base HTML template.
+- Use Django migrations to create all tables.
+- Implement full CRUD (Create, Read, Update, Delete) for:
+  - Seasons
+  - Categories
+  - Types
+  - Fabrics
+  - Colors
+  - Styles
+  - Prints
+  - Placements
+  - Suppliers
+  - Factories
+  - Sizes
+  - Mapping (token → numeric code)
+  - Products
+
+- The UI can be in Arabic (field labels) but model/field names in code can be English.
+- Add basic navigation menu to reach each master-data section and the Products section.
+
+====================================================
+## 2) Database models (schema)
+====================================================
+
+Create the following Django models. All text fields must accept Arabic UTF-8 safely.
+
+### 2.1 Season
+- `code` (CharField, unique, e.g. "S26", "W26", "S27")
+- `name_ar` (CharField, e.g. "موسم صيف 26")
+- `name_en` (CharField, optional, e.g. "Summer 26")
+
+### 2.2 Category
+- `code` (CharField, unique, examples: "TP", "BT", "ST", "UW", "SW", "OT")
+- `name_ar` (CharField, e.g. "تيشيرتات / علوي")
+- `name_en` (CharField, e.g. "Tops")
+
+### 2.3 Type
+- `code` (CharField, unique, examples:  
+  "RTS" (Round T-Shirt), "SLS", "SSS", "POL", "JST", "TNK", "HO",  
+  "SWT", "SST", "OVS", "ZIP", "HZP", "HSN", "JNS", "CSP", "CHN",  
+  "JOG", "SRL", "BGY", "TRK", "TSP", "TSS", "BXR", "MSS")
+- `name_ar` (CharField, e.g. "هودي", "تيشيرت راوند", "بنطلون جينز")
+- `name_en` (CharField, e.g. "Hoodie", "Round T-Shirt")
+- (Optional) `category` (ForeignKey to Category, null=True, blank=True)
+
+### 2.4 Fabric
+- `code` (CharField, unique, examples: "MLT", "JRS", "LNN", "INT", "BRS", "PLV", "DM", "OXF", "PPL")
+- `name_ar` (CharField, e.g. "ميلتون")
+- `name_en` (CharField, e.g. "Melton")
+
+### 2.5 Color
+- `code` (CharField, unique, examples: "BLK", "WHT", "RED", "BLU")
+- `hex_value` (CharField, e.g. "#000000", "#FFFFFF")
+- `name_ar` (CharField, e.g. "أسود", "أبيض")
+- `name_en` (CharField, e.g. "Black", "White")
+
+### 2.6 Style
+- `code` (CharField, unique, examples: "ARB", "TXT", "FRH", "STS", "CUT", "FPR", "MIN", "ANC", "VNT", "RET", "FLR")
+- `name_ar` (CharField, e.g. "عربي", "مينمال")
+- `name_en` (CharField, e.g. "arabic", "minimal")
+
+### 2.7 PrintType
+- `code` (CharField, unique, examples: "NP", "SLK", "DTF", "RBR", "FOM", "BUF", "KRH", "STR", "PCH")
+- `name_ar` (CharField, e.g. "بدون طباعة", "سيلك سكرين", "دي تي اف")
+- `name_en` (CharField, e.g. "NoPrint", "silk screen", "DTF")
+
+### 2.8 Placement
+- `code` (CharField, unique, examples: "MDF", "LPF", "RPF", "LDF", "RDF", "MDB", "LBK", "RBK", "LDB", "RDB", "RSL", "LSL", "NCK")
+- `name_ar` (CharField, e.g. "منتصف الأمام", "الكم الشمال", "الياقة / الرقبة")
+- `name_en` (CharField, e.g. "mid front", "left sleeve", "neck")
+
+### 2.9 Supplier
+- `code` (CharField, unique, e.g. "S1", "S2", "S3")
+- `name_ar` (CharField, e.g. "مورد 1")
+- `name_en` (CharField, optional)
+
+### 2.10 Factory
+- `code` (CharField, unique, e.g. "F1", "F2", "F3")
+- `name_ar` (CharField, e.g. "مصنع 1")
+- `name_en` (CharField, optional)
+
+### 2.11 Size
+- `code` (CharField, unique, e.g. "S", "M", "L", "XL", "XXL", "3XL", "4XL", "5XL", "6XL")
+- `name_ar` (CharField, e.g. "صغير", "كبير", "دبل اكس لارج")
+- `name_en` (CharField, optional)
+
+### 2.12 MappingToken (for numeric SKU coding)
+This is the “dictionary” that maps each token (Season code, Type code, DesignNo, etc.) to a small numeric code.
+
+- `token` (CharField, unique, example values: "S26", "TP", "RTS", "2001", "JRS", "RED", "ARB", "SLK", "MDF", "S2", "F3", "XXL")
+- `numeric_code` (IntegerField, small integer, example: 1,2,3,4,5,6,7,8,9,10,11,12)
+- `description_ar` (CharField, e.g. "سيزون صيف 26", "هودي", "طباعة سيلك", "مقاس XXL")
+- `description_en` (CharField, optional, e.g. "Season Summer 26", "Hoodie")
+
+### 2.13 Product
+This is the main product table. Use ForeignKeys to master tables.
+
+Fields:
+- `season` (ForeignKey to Season)
+- `category` (ForeignKey to Category)
+- `type` (ForeignKey to Type)
+- `design_no` (CharField, e.g. "2006" or "2001")
+- `fabric` (ForeignKey to Fabric)
+- `color` (ForeignKey to Color)
+- `style` (ForeignKey to Style)
+- `print_type` (ForeignKey to PrintType)
+- `placement` (ForeignKey to Placement)
+- `supplier` (ForeignKey to Supplier)
+- `factory` (ForeignKey to Factory)
+- `size` (ForeignKey to Size)
+
+- `product_name_ar` (CharField) – full commercial name in Arabic, e.g. "هودي ميلتون أسود أوفر سايز"
+- `product_name_en` (CharField, optional) – English name, e.g. "Oversize Black Melton Hoodie"
+
+- `master_design_code` (CharField, stored)  
+  Example format:
+  `SeasonCode-CategoryCode-TypeCode-DesignNo`  
+  e.g. `S26-TP-HO-2006`
+
+- `sku_code` (CharField, stored)  
+  Example format:  
+  `Season-Category-Type-DesignNo-Fabric-Color-Style-Print-Placement-Supplier-Factory-Size`  
+  Example:  
+  `S26-TP-HO-2006-MLT-BLK-MIN-DTF-MDF-S1-F1-L`
+
+- `sku_coded_segmented` (CharField, stored)  
+  This uses MappingToken.numeric_code for each token and joins them with "-".  
+  Example mapping:  
+  S26→1, TP→2, HO→3, 2006→4, MLT→5, BLK→6, MIN→7, DTF→8, MDF→9, S1→10, F1→11, L→12  
+  Then:  
+  `sku_coded_segmented = "1-2-3-4-5-6-7-8-9-10-11-12"`
+
+- `sku_coded_compact` (CharField, stored)  
+  Same codes but concatenated as digits only, e.g.:  
+  `"123456789101112"`  
+  or with zero-padding per part (for example 2 or 3 digits per segment), you can choose a consistent rule and document it in comments.
+
+- `notes` (TextField, optional) – any free notes.
+
+Implement a `save()` method or a separate service function to automatically compute:
+- `master_design_code`
+- `sku_code`
+- `sku_coded_segmented`
+- `sku_coded_compact`
+every time a Product is created or updated.
+
+====================================================
+## 3) SKU generation logic
+====================================================
+
+### 3.1 master_design_code
+Build as:
+`f"{season.code}-{category.code}-{type.code}-{design_no}"`
+
+### 3.2 sku_code
+Order:
+`SeasonCode-CategoryCode-TypeCode-DesignNo-FabricCode-ColorCode-StyleCode-PrintCode-PlacementCode-SupplierCode-FactoryCode-SizeCode`
+
+Example:
+
+- Season: S26  
+- Category: TP  
+- Type: HO  
+- DesignNo: 2006  
+- Fabric: MLT  
+- Color: BLK  
+- Style: MIN  
+- Print: DTF  
+- Placement: MDF  
+- Supplier: S1  
+- Factory: F1  
+- Size: L  
+
+Result:
+`S26-TP-HO-2006-MLT-BLK-MIN-DTF-MDF-S1-F1-L`
+
+### 3.3 Numeric mapping (MappingToken)
+
+Use the MappingToken table to transform each token into a small integer.
+
+Example mapping dictionary row examples:
+- Token = "S26"  → numeric_code = 1
+- Token = "TP"   → numeric_code = 2
+- Token = "HO"   → numeric_code = 3
+- Token = "2006" → numeric_code = 4
+- Token = "MLT"  → numeric_code = 5
+- Token = "BLK"  → numeric_code = 6
+- Token = "MIN"  → numeric_code = 7
+- Token = "DTF"  → numeric_code = 8
+- Token = "MDF"  → numeric_code = 9
+- Token = "S1"   → numeric_code = 10
+- Token = "F1"   → numeric_code = 11
+- Token = "L"    → numeric_code = 12
+
+Then:
+- tokens list = [`S26`, `TP`, `HO`, `2006`, `MLT`, `BLK`, `MIN`, `DTF`, `MDF`, `S1`, `F1`, `L`]
+- numeric list = [1,2,3,4,5,6,7,8,9,10,11,12]
+
+`sku_coded_segmented = "1-2-3-4-5-6-7-8-9-10-11-12"`
+
+`sku_coded_compact = "123456789101112"` or zero-padded version.
+
+If any token is missing in MappingToken, handle gracefully:
+- ignore it or raise a validation error.
+Comment this behavior in the code.
+
+### 3.4 Optional decoding function
+
+Implement a helper function or view that can:
+- Take `sku_coded_segmented` or `sku_coded_compact`
+- Split/parse it back into numeric codes
+- Use MappingToken to recover the original tokens
+- Then reconstruct `sku_code`
+
+It can be a simple tool page:  
+Input: numeric SKU → Output: text SKU + detailed breakdown.
+
+====================================================
+## 4) Views / URLs / Templates (CRUD)
+====================================================
+
+For each master model (Season, Category, Type, Fabric, Color, Style, PrintType, Placement, Supplier, Factory, Size, MappingToken):
+
+- Create list view (table with search/filter).
+- Create create view (form to add new).
+- Create update view (edit).
+- Create delete view (with confirmation).
+- Use Django generic class-based views if you want (ListView, CreateView, UpdateView, DeleteView).
+- Forms must show Arabic labels in the HTML templates (e.g. "اسم بالعربي", "الكود", etc.).
+
+For **Product**:
+
+- Product List page:
+  - Table showing: product_name_ar, sku_code, sku_coded_segmented, sku_coded_compact, season, category, type, fabric, color, size, supplier, factory.
+  - Filters for season, category, supplier, fabric, etc. (simple GET query parameters).
+
+- Product Create/Edit form:
+  - Drop-down selects for:
+    - Season (display name_ar, value = FK)
+    - Category (display name_ar)
+    - Type (display name_ar)
+    - Fabric (display name_ar)
+    - Color (display name_ar and maybe show hex)
+    - Style (display name_ar)
+    - PrintType (display name_ar)
+    - Placement (display name_ar)
+    - Supplier (display name_ar)
+    - Factory (display name_ar)
+    - Size (display name_ar)
+  - Text input for `design_no`
+  - Text input for `product_name_ar`
+  - Text input for `product_name_en`
+  - Textarea for `notes`
+
+On form submit:
+- Backend computes `master_design_code`, `sku_code`, `sku_coded_segmented`, `sku_coded_compact` automatically in the Product model (override `save()`).
+
+Product Delete view:
+- Confirm then delete.
+
+====================================================
+## 5) UI / Layout
+====================================================
+
+- Create a base template `base.html` with:
+  - Bootstrap 5
+  - `<meta charset="UTF-8">`
+  - Navbar with links to:
+    - Home / Dashboard
+    - Seasons
+    - Categories
+    - Types
+    - Fabrics
+    - Colors
+    - Styles
+    - Prints
+    - Placements
+    - Suppliers
+    - Factories
+    - Sizes
+    - Mapping
+    - Products
+
+- All pages extend `base.html`.
+
+- Tables should show Arabic column headers, for example:
+  - "الكود"
+  - "الاسم بالعربي"
+  - "الاسم بالإنجليزي"
+  - "الإجراءات" (for edit/delete).
+
+- Product list page also shows:
+  - "الكود الأساسي للتصميم" (master_design_code)
+  - "SKU نصي"
+  - "SKU رقمي مقطّع"
+  - "SKU رقمي مدمج"
+
+====================================================
+## 6) Code organization
+====================================================
+
+- Create a Django project, e.g. `product_coding_project`.
+- Create an app, e.g. `catalog`.
+- Put all models in `catalog/models.py`.
+- Put views in `catalog/views.py`.
+- Put URL routes in `catalog/urls.py` and include this in the main `urls.py`.
+- Create forms in `catalog/forms.py` if needed (or let generic views build them).
+- Put templates under `templates/catalog/` (e.g. `product_list.html`, `product_form.html`, etc.).
+
+Add clear comments in the code (in English) explaining:
+- How SKU is generated.
+- How the mapping dictionary works.
+- How to add new tokens into MappingToken to support new seasons, fabrics, etc.
+
+At the end, show me:
+- `models.py`
+- `views.py`
+- `urls.py`
+- One or two key templates (for example product list and product form)
+- Any helper utilities for SKU building / decoding.
