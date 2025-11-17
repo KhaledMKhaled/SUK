@@ -1,19 +1,30 @@
-import { randomUUID } from "crypto";
-import type {
-  Season, InsertSeason,
-  Category, InsertCategory,
-  Type, InsertType,
-  Fabric, InsertFabric,
-  Color, InsertColor,
-  Style, InsertStyle,
-  PrintType, InsertPrintType,
-  Placement, InsertPlacement,
-  Supplier, InsertSupplier,
-  Factory, InsertFactory,
-  Size, InsertSize,
-  MappingToken, InsertMappingToken,
-  Product, InsertProduct, ProductWithDetails
+import { drizzle } from "drizzle-orm/neon-http";
+import { neon } from "@neondatabase/serverless";
+import { eq, sql, max } from "drizzle-orm";
+import {
+  seasons, categories, types, fabrics, colors, styles, printTypes, placements,
+  suppliers, factories, sizes, mappingTokens, products,
+  type Season, type InsertSeason,
+  type Category, type InsertCategory,
+  type Type, type InsertType,
+  type Fabric, type InsertFabric,
+  type Color, type InsertColor,
+  type Style, type InsertStyle,
+  type PrintType, type InsertPrintType,
+  type Placement, type InsertPlacement,
+  type Supplier, type InsertSupplier,
+  type Factory, type InsertFactory,
+  type Size, type InsertSize,
+  type MappingToken, type InsertMappingToken,
+  type Product, type InsertProduct, type ProductWithDetails
 } from "@shared/schema";
+
+if (!process.env.DATABASE_URL) {
+  throw new Error("DATABASE_URL is not set");
+}
+
+const connection = neon(process.env.DATABASE_URL);
+const db = drizzle(connection);
 
 export interface IStorage {
   getSeasons(): Promise<Season[]>;
@@ -95,521 +106,685 @@ export interface IStorage {
   deleteProduct(id: string): Promise<boolean>;
 }
 
-export class MemStorage implements IStorage {
-  private seasons: Map<string, Season> = new Map();
-  private categories: Map<string, Category> = new Map();
-  private types: Map<string, Type> = new Map();
-  private fabrics: Map<string, Fabric> = new Map();
-  private colors: Map<string, Color> = new Map();
-  private styles: Map<string, Style> = new Map();
-  private printTypes: Map<string, PrintType> = new Map();
-  private placements: Map<string, Placement> = new Map();
-  private suppliers: Map<string, Supplier> = new Map();
-  private factories: Map<string, Factory> = new Map();
-  private sizes: Map<string, Size> = new Map();
-  private mappingTokens: Map<string, MappingToken> = new Map();
-  private products: Map<string, Product> = new Map();
-
-  constructor() {}
+export class DatabaseStorage implements IStorage {
+  private async createWithNumericCode<T>(
+    table: any,
+    data: any
+  ): Promise<T> {
+    return await db.transaction(async (tx) => {
+      const maxResult = await tx.select({ value: max(table.numericCode) }).from(table);
+      const maxCode = maxResult[0]?.value || 0;
+      const nextCode = maxCode + 1;
+      
+      if (nextCode > 1000) {
+        throw new Error(`Cannot create more than 1000 items for this master data type. Current max: ${maxCode}`);
+      }
+      
+      const result = await tx.insert(table).values({
+        ...data,
+        numericCode: nextCode,
+      }).returning();
+      
+      return result[0] as T;
+    });
+  }
 
   async getSeasons(): Promise<Season[]> {
-    return Array.from(this.seasons.values());
+    const result = await db.select().from(seasons);
+    return result || [];
   }
 
   async getSeason(id: string): Promise<Season | undefined> {
-    return this.seasons.get(id);
+    const result = await db.select().from(seasons).where(eq(seasons.id, id));
+    return result[0];
   }
 
   async createSeason(data: InsertSeason): Promise<Season> {
-    const id = randomUUID();
-    const season: Season = { id, ...data };
-    this.seasons.set(id, season);
-    return season;
+    return await this.createWithNumericCode<Season>(seasons, data);
   }
 
   async updateSeason(id: string, data: InsertSeason): Promise<Season | undefined> {
-    if (!this.seasons.has(id)) return undefined;
-    const season: Season = { id, ...data };
-    this.seasons.set(id, season);
-    return season;
+    const existing = await this.getSeason(id);
+    if (!existing) return undefined;
+    
+    const result = await db.update(seasons)
+      .set({ ...data, numericCode: existing.numericCode })
+      .where(eq(seasons.id, id))
+      .returning();
+    
+    return result[0];
   }
 
   async deleteSeason(id: string): Promise<boolean> {
-    return this.seasons.delete(id);
+    const result = await db.delete(seasons).where(eq(seasons.id, id)).returning();
+    return result.length > 0;
   }
 
   async getCategories(): Promise<Category[]> {
-    return Array.from(this.categories.values());
+    const result = await db.select().from(categories);
+    return result || [];
   }
 
   async getCategory(id: string): Promise<Category | undefined> {
-    return this.categories.get(id);
+    const result = await db.select().from(categories).where(eq(categories.id, id));
+    return result[0];
   }
 
   async createCategory(data: InsertCategory): Promise<Category> {
-    const id = randomUUID();
-    const category: Category = { id, ...data };
-    this.categories.set(id, category);
-    return category;
+    return await this.createWithNumericCode<Category>(categories, data);
   }
 
   async updateCategory(id: string, data: InsertCategory): Promise<Category | undefined> {
-    if (!this.categories.has(id)) return undefined;
-    const category: Category = { id, ...data };
-    this.categories.set(id, category);
-    return category;
+    const existing = await this.getCategory(id);
+    if (!existing) return undefined;
+    
+    const result = await db.update(categories)
+      .set({ ...data, numericCode: existing.numericCode })
+      .where(eq(categories.id, id))
+      .returning();
+    
+    return result[0];
   }
 
   async deleteCategory(id: string): Promise<boolean> {
-    return this.categories.delete(id);
+    const result = await db.delete(categories).where(eq(categories.id, id)).returning();
+    return result.length > 0;
   }
 
   async getTypes(): Promise<Type[]> {
-    return Array.from(this.types.values());
+    const result = await db.select().from(types);
+    return result || [];
   }
 
   async getType(id: string): Promise<Type | undefined> {
-    return this.types.get(id);
+    const result = await db.select().from(types).where(eq(types.id, id));
+    return result[0];
   }
 
   async createType(data: InsertType): Promise<Type> {
-    const id = randomUUID();
-    const type: Type = { id, ...data };
-    this.types.set(id, type);
-    return type;
+    return await this.createWithNumericCode<Type>(types, data);
   }
 
   async updateType(id: string, data: InsertType): Promise<Type | undefined> {
-    if (!this.types.has(id)) return undefined;
-    const type: Type = { id, ...data };
-    this.types.set(id, type);
-    return type;
+    const existing = await this.getType(id);
+    if (!existing) return undefined;
+    
+    const result = await db.update(types)
+      .set({ ...data, numericCode: existing.numericCode })
+      .where(eq(types.id, id))
+      .returning();
+    
+    return result[0];
   }
 
   async deleteType(id: string): Promise<boolean> {
-    return this.types.delete(id);
+    const result = await db.delete(types).where(eq(types.id, id)).returning();
+    return result.length > 0;
   }
 
   async getFabrics(): Promise<Fabric[]> {
-    return Array.from(this.fabrics.values());
+    const result = await db.select().from(fabrics);
+    return result || [];
   }
 
   async getFabric(id: string): Promise<Fabric | undefined> {
-    return this.fabrics.get(id);
+    const result = await db.select().from(fabrics).where(eq(fabrics.id, id));
+    return result[0];
   }
 
   async createFabric(data: InsertFabric): Promise<Fabric> {
-    const id = randomUUID();
-    const fabric: Fabric = { id, ...data };
-    this.fabrics.set(id, fabric);
-    return fabric;
+    return await this.createWithNumericCode<Fabric>(fabrics, data);
   }
 
   async updateFabric(id: string, data: InsertFabric): Promise<Fabric | undefined> {
-    if (!this.fabrics.has(id)) return undefined;
-    const fabric: Fabric = { id, ...data };
-    this.fabrics.set(id, fabric);
-    return fabric;
+    const existing = await this.getFabric(id);
+    if (!existing) return undefined;
+    
+    const result = await db.update(fabrics)
+      .set({ ...data, numericCode: existing.numericCode })
+      .where(eq(fabrics.id, id))
+      .returning();
+    
+    return result[0];
   }
 
   async deleteFabric(id: string): Promise<boolean> {
-    return this.fabrics.delete(id);
+    const result = await db.delete(fabrics).where(eq(fabrics.id, id)).returning();
+    return result.length > 0;
   }
 
   async getColors(): Promise<Color[]> {
-    return Array.from(this.colors.values());
+    const result = await db.select().from(colors);
+    return result || [];
   }
 
   async getColor(id: string): Promise<Color | undefined> {
-    return this.colors.get(id);
+    const result = await db.select().from(colors).where(eq(colors.id, id));
+    return result[0];
   }
 
   async createColor(data: InsertColor): Promise<Color> {
-    const id = randomUUID();
-    const color: Color = { id, ...data };
-    this.colors.set(id, color);
-    return color;
+    return await this.createWithNumericCode<Color>(colors, data);
   }
 
   async updateColor(id: string, data: InsertColor): Promise<Color | undefined> {
-    if (!this.colors.has(id)) return undefined;
-    const color: Color = { id, ...data };
-    this.colors.set(id, color);
-    return color;
+    const existing = await this.getColor(id);
+    if (!existing) return undefined;
+    
+    const result = await db.update(colors)
+      .set({ ...data, numericCode: existing.numericCode })
+      .where(eq(colors.id, id))
+      .returning();
+    
+    return result[0];
   }
 
   async deleteColor(id: string): Promise<boolean> {
-    return this.colors.delete(id);
+    const result = await db.delete(colors).where(eq(colors.id, id)).returning();
+    return result.length > 0;
   }
 
   async getStyles(): Promise<Style[]> {
-    return Array.from(this.styles.values());
+    const result = await db.select().from(styles);
+    return result || [];
   }
 
   async getStyle(id: string): Promise<Style | undefined> {
-    return this.styles.get(id);
+    const result = await db.select().from(styles).where(eq(styles.id, id));
+    return result[0];
   }
 
   async createStyle(data: InsertStyle): Promise<Style> {
-    const id = randomUUID();
-    const style: Style = { id, ...data };
-    this.styles.set(id, style);
-    return style;
+    return await this.createWithNumericCode<Style>(styles, data);
   }
 
   async updateStyle(id: string, data: InsertStyle): Promise<Style | undefined> {
-    if (!this.styles.has(id)) return undefined;
-    const style: Style = { id, ...data };
-    this.styles.set(id, style);
-    return style;
+    const existing = await this.getStyle(id);
+    if (!existing) return undefined;
+    
+    const result = await db.update(styles)
+      .set({ ...data, numericCode: existing.numericCode })
+      .where(eq(styles.id, id))
+      .returning();
+    
+    return result[0];
   }
 
   async deleteStyle(id: string): Promise<boolean> {
-    return this.styles.delete(id);
+    const result = await db.delete(styles).where(eq(styles.id, id)).returning();
+    return result.length > 0;
   }
 
   async getPrintTypes(): Promise<PrintType[]> {
-    return Array.from(this.printTypes.values());
+    const result = await db.select().from(printTypes);
+    return result || [];
   }
 
   async getPrintType(id: string): Promise<PrintType | undefined> {
-    return this.printTypes.get(id);
+    const result = await db.select().from(printTypes).where(eq(printTypes.id, id));
+    return result[0];
   }
 
   async createPrintType(data: InsertPrintType): Promise<PrintType> {
-    const id = randomUUID();
-    const printType: PrintType = { id, ...data };
-    this.printTypes.set(id, printType);
-    return printType;
+    return await this.createWithNumericCode<PrintType>(printTypes, data);
   }
 
   async updatePrintType(id: string, data: InsertPrintType): Promise<PrintType | undefined> {
-    if (!this.printTypes.has(id)) return undefined;
-    const printType: PrintType = { id, ...data };
-    this.printTypes.set(id, printType);
-    return printType;
+    const existing = await this.getPrintType(id);
+    if (!existing) return undefined;
+    
+    const result = await db.update(printTypes)
+      .set({ ...data, numericCode: existing.numericCode })
+      .where(eq(printTypes.id, id))
+      .returning();
+    
+    return result[0];
   }
 
   async deletePrintType(id: string): Promise<boolean> {
-    return this.printTypes.delete(id);
+    const result = await db.delete(printTypes).where(eq(printTypes.id, id)).returning();
+    return result.length > 0;
   }
 
   async getPlacements(): Promise<Placement[]> {
-    return Array.from(this.placements.values());
+    const result = await db.select().from(placements);
+    return result || [];
   }
 
   async getPlacement(id: string): Promise<Placement | undefined> {
-    return this.placements.get(id);
+    const result = await db.select().from(placements).where(eq(placements.id, id));
+    return result[0];
   }
 
   async createPlacement(data: InsertPlacement): Promise<Placement> {
-    const id = randomUUID();
-    const placement: Placement = { id, ...data };
-    this.placements.set(id, placement);
-    return placement;
+    return await this.createWithNumericCode<Placement>(placements, data);
   }
 
   async updatePlacement(id: string, data: InsertPlacement): Promise<Placement | undefined> {
-    if (!this.placements.has(id)) return undefined;
-    const placement: Placement = { id, ...data };
-    this.placements.set(id, placement);
-    return placement;
+    const existing = await this.getPlacement(id);
+    if (!existing) return undefined;
+    
+    const result = await db.update(placements)
+      .set({ ...data, numericCode: existing.numericCode })
+      .where(eq(placements.id, id))
+      .returning();
+    
+    return result[0];
   }
 
   async deletePlacement(id: string): Promise<boolean> {
-    return this.placements.delete(id);
+    const result = await db.delete(placements).where(eq(placements.id, id)).returning();
+    return result.length > 0;
   }
 
   async getSuppliers(): Promise<Supplier[]> {
-    return Array.from(this.suppliers.values());
+    const result = await db.select().from(suppliers);
+    return result || [];
   }
 
   async getSupplier(id: string): Promise<Supplier | undefined> {
-    return this.suppliers.get(id);
+    const result = await db.select().from(suppliers).where(eq(suppliers.id, id));
+    return result[0];
   }
 
   async createSupplier(data: InsertSupplier): Promise<Supplier> {
-    const id = randomUUID();
-    const supplier: Supplier = { id, ...data };
-    this.suppliers.set(id, supplier);
-    return supplier;
+    return await this.createWithNumericCode<Supplier>(suppliers, data);
   }
 
   async updateSupplier(id: string, data: InsertSupplier): Promise<Supplier | undefined> {
-    if (!this.suppliers.has(id)) return undefined;
-    const supplier: Supplier = { id, ...data };
-    this.suppliers.set(id, supplier);
-    return supplier;
+    const existing = await this.getSupplier(id);
+    if (!existing) return undefined;
+    
+    const result = await db.update(suppliers)
+      .set({ ...data, numericCode: existing.numericCode })
+      .where(eq(suppliers.id, id))
+      .returning();
+    
+    return result[0];
   }
 
   async deleteSupplier(id: string): Promise<boolean> {
-    return this.suppliers.delete(id);
+    const result = await db.delete(suppliers).where(eq(suppliers.id, id)).returning();
+    return result.length > 0;
   }
 
   async getFactories(): Promise<Factory[]> {
-    return Array.from(this.factories.values());
+    const result = await db.select().from(factories);
+    return result || [];
   }
 
   async getFactory(id: string): Promise<Factory | undefined> {
-    return this.factories.get(id);
+    const result = await db.select().from(factories).where(eq(factories.id, id));
+    return result[0];
   }
 
   async createFactory(data: InsertFactory): Promise<Factory> {
-    const id = randomUUID();
-    const factory: Factory = { id, ...data };
-    this.factories.set(id, factory);
-    return factory;
+    return await this.createWithNumericCode<Factory>(factories, data);
   }
 
   async updateFactory(id: string, data: InsertFactory): Promise<Factory | undefined> {
-    if (!this.factories.has(id)) return undefined;
-    const factory: Factory = { id, ...data };
-    this.factories.set(id, factory);
-    return factory;
+    const existing = await this.getFactory(id);
+    if (!existing) return undefined;
+    
+    const result = await db.update(factories)
+      .set({ ...data, numericCode: existing.numericCode })
+      .where(eq(factories.id, id))
+      .returning();
+    
+    return result[0];
   }
 
   async deleteFactory(id: string): Promise<boolean> {
-    return this.factories.delete(id);
+    const result = await db.delete(factories).where(eq(factories.id, id)).returning();
+    return result.length > 0;
   }
 
   async getSizes(): Promise<Size[]> {
-    return Array.from(this.sizes.values());
+    const result = await db.select().from(sizes);
+    return result || [];
   }
 
   async getSize(id: string): Promise<Size | undefined> {
-    return this.sizes.get(id);
+    const result = await db.select().from(sizes).where(eq(sizes.id, id));
+    return result[0];
   }
 
   async createSize(data: InsertSize): Promise<Size> {
-    const id = randomUUID();
-    const size: Size = { id, ...data };
-    this.sizes.set(id, size);
-    return size;
+    return await this.createWithNumericCode<Size>(sizes, data);
   }
 
   async updateSize(id: string, data: InsertSize): Promise<Size | undefined> {
-    if (!this.sizes.has(id)) return undefined;
-    const size: Size = { id, ...data };
-    this.sizes.set(id, size);
-    return size;
+    const existing = await this.getSize(id);
+    if (!existing) return undefined;
+    
+    const result = await db.update(sizes)
+      .set({ ...data, numericCode: existing.numericCode })
+      .where(eq(sizes.id, id))
+      .returning();
+    
+    return result[0];
   }
 
   async deleteSize(id: string): Promise<boolean> {
-    return this.sizes.delete(id);
+    const result = await db.delete(sizes).where(eq(sizes.id, id)).returning();
+    return result.length > 0;
   }
 
   async getMappingTokens(): Promise<MappingToken[]> {
-    return Array.from(this.mappingTokens.values());
+    const result = await db.select().from(mappingTokens);
+    return result || [];
   }
 
   async getMappingToken(id: string): Promise<MappingToken | undefined> {
-    return this.mappingTokens.get(id);
+    const result = await db.select().from(mappingTokens).where(eq(mappingTokens.id, id));
+    return result[0];
   }
 
   async createMappingToken(data: InsertMappingToken): Promise<MappingToken> {
-    const id = randomUUID();
-    const token: MappingToken = { id, ...data };
-    this.mappingTokens.set(id, token);
-    return token;
+    const result = await db.insert(mappingTokens).values(data).returning();
+    return result[0];
   }
 
   async updateMappingToken(id: string, data: InsertMappingToken): Promise<MappingToken | undefined> {
-    if (!this.mappingTokens.has(id)) return undefined;
-    const token: MappingToken = { id, ...data };
-    this.mappingTokens.set(id, token);
-    return token;
+    const existing = await this.getMappingToken(id);
+    if (!existing) return undefined;
+    
+    const result = await db.update(mappingTokens)
+      .set(data)
+      .where(eq(mappingTokens.id, id))
+      .returning();
+    
+    return result[0];
   }
 
   async deleteMappingToken(id: string): Promise<boolean> {
-    return this.mappingTokens.delete(id);
+    const result = await db.delete(mappingTokens).where(eq(mappingTokens.id, id)).returning();
+    return result.length > 0;
   }
 
   async getProducts(): Promise<ProductWithDetails[]> {
-    const products = Array.from(this.products.values());
+    const allProducts = await db.select().from(products) || [];
     
-    return products.map(product => ({
-      ...product,
-      season: this.seasons.get(product.seasonId),
-      category: this.categories.get(product.categoryId),
-      type: this.types.get(product.typeId),
-      fabric: this.fabrics.get(product.fabricId),
-      color: this.colors.get(product.colorId),
-      style: this.styles.get(product.styleId),
-      printType: this.printTypes.get(product.printTypeId),
-      placement: this.placements.get(product.placementId),
-      supplier: this.suppliers.get(product.supplierId),
-      factory: this.factories.get(product.factoryId),
-      size: this.sizes.get(product.sizeId),
-    }));
+    const productsWithDetails: ProductWithDetails[] = await Promise.all(
+      allProducts.map(async (product) => {
+        const [
+          season,
+          category,
+          type,
+          fabric,
+          color,
+          style,
+          printType,
+          placement,
+          supplier,
+          factory,
+          size,
+        ] = await Promise.all([
+          this.getSeason(product.seasonId),
+          this.getCategory(product.categoryId),
+          this.getType(product.typeId),
+          this.getFabric(product.fabricId),
+          this.getColor(product.colorId),
+          this.getStyle(product.styleId),
+          this.getPrintType(product.printTypeId),
+          this.getPlacement(product.placementId),
+          this.getSupplier(product.supplierId),
+          this.getFactory(product.factoryId),
+          this.getSize(product.sizeId),
+        ]);
+
+        return {
+          ...product,
+          season,
+          category,
+          type,
+          fabric,
+          color,
+          style,
+          printType,
+          placement,
+          supplier,
+          factory,
+          size,
+        };
+      })
+    );
+
+    return productsWithDetails;
   }
 
   async getProduct(id: string): Promise<ProductWithDetails | undefined> {
-    const product = this.products.get(id);
+    const result = await db.select().from(products).where(eq(products.id, id));
+    const product = result[0];
+    
     if (!product) return undefined;
+
+    const [
+      season,
+      category,
+      type,
+      fabric,
+      color,
+      style,
+      printType,
+      placement,
+      supplier,
+      factory,
+      size,
+    ] = await Promise.all([
+      this.getSeason(product.seasonId),
+      this.getCategory(product.categoryId),
+      this.getType(product.typeId),
+      this.getFabric(product.fabricId),
+      this.getColor(product.colorId),
+      this.getStyle(product.styleId),
+      this.getPrintType(product.printTypeId),
+      this.getPlacement(product.placementId),
+      this.getSupplier(product.supplierId),
+      this.getFactory(product.factoryId),
+      this.getSize(product.sizeId),
+    ]);
 
     return {
       ...product,
-      season: this.seasons.get(product.seasonId),
-      category: this.categories.get(product.categoryId),
-      type: this.types.get(product.typeId),
-      fabric: this.fabrics.get(product.fabricId),
-      color: this.colors.get(product.colorId),
-      style: this.styles.get(product.styleId),
-      printType: this.printTypes.get(product.printTypeId),
-      placement: this.placements.get(product.placementId),
-      supplier: this.suppliers.get(product.supplierId),
-      factory: this.factories.get(product.factoryId),
-      size: this.sizes.get(product.sizeId),
+      season,
+      category,
+      type,
+      fabric,
+      color,
+      style,
+      printType,
+      placement,
+      supplier,
+      factory,
+      size,
     };
   }
 
   async createProduct(data: InsertProduct): Promise<Product> {
-    const id = randomUUID();
-    
-    const season = this.seasons.get(data.seasonId);
-    const category = this.categories.get(data.categoryId);
-    const type = this.types.get(data.typeId);
-    const fabric = this.fabrics.get(data.fabricId);
-    const color = this.colors.get(data.colorId);
-    const style = this.styles.get(data.styleId);
-    const printType = this.printTypes.get(data.printTypeId);
-    const placement = this.placements.get(data.placementId);
-    const supplier = this.suppliers.get(data.supplierId);
-    const factory = this.factories.get(data.factoryId);
-    const size = this.sizes.get(data.sizeId);
+    const [
+      season,
+      category,
+      type,
+      fabric,
+      color,
+      style,
+      printType,
+      placement,
+      supplier,
+      factory,
+      size,
+    ] = await Promise.all([
+      this.getSeason(data.seasonId),
+      this.getCategory(data.categoryId),
+      this.getType(data.typeId),
+      this.getFabric(data.fabricId),
+      this.getColor(data.colorId),
+      this.getStyle(data.styleId),
+      this.getPrintType(data.printTypeId),
+      this.getPlacement(data.placementId),
+      this.getSupplier(data.supplierId),
+      this.getFactory(data.factoryId),
+      this.getSize(data.sizeId),
+    ]);
 
-    const masterDesignCode = `${season?.code}-${category?.code}-${type?.code}-${data.designNo}`;
-    
-    const skuCode = [
-      season?.code,
-      category?.code,
-      type?.code,
-      data.designNo,
-      fabric?.code,
-      color?.code,
-      style?.code,
-      printType?.code,
-      placement?.code,
-      supplier?.code,
-      factory?.code,
-      size?.code,
-    ].join("-");
-
-    const tokens = [
-      season?.code,
-      category?.code,
-      type?.code,
-      data.designNo,
-      fabric?.code,
-      color?.code,
-      style?.code,
-      printType?.code,
-      placement?.code,
-      supplier?.code,
-      factory?.code,
-      size?.code,
-    ];
-
-    const numericCodes: number[] = [];
-    for (const token of tokens) {
-      if (!token) continue;
-      const mapping = Array.from(this.mappingTokens.values()).find(m => m.token === token);
-      if (mapping) {
-        numericCodes.push(mapping.numericCode);
-      }
+    if (!season || !category || !type || !fabric || !color || !style || 
+        !printType || !placement || !supplier || !factory || !size) {
+      throw new Error("One or more related master data not found");
     }
 
-    const skuCodedSegmented = numericCodes.join("-");
-    const skuCodedCompact = numericCodes.join("");
+    const masterDesignCode = [
+      season.code,
+      category.code,
+      type.code,
+      data.designNo,
+      fabric.code,
+      color.code,
+    ].join("-");
 
-    const product: Product = {
-      id,
+    const skuCode = [
+      season.code,
+      category.code,
+      type.code,
+      data.designNo,
+      fabric.code,
+      color.code,
+      style.code,
+      printType.code,
+      placement.code,
+      supplier.code,
+      factory.code,
+      size.code,
+    ].join("-");
+
+    const designNoNumeric = parseInt(data.designNo) || 0;
+
+    const numericCodes = [
+      season.numericCode,
+      category.numericCode,
+      type.numericCode,
+      designNoNumeric,
+      fabric.numericCode,
+      color.numericCode,
+      style.numericCode,
+      printType.numericCode,
+      placement.numericCode,
+      supplier.numericCode,
+      factory.numericCode,
+      size.numericCode,
+    ];
+
+    const skuCodedSegmented = numericCodes.join("-");
+    const skuCodedCompact = numericCodes.map(n => n.toString().padStart(3, "0")).join("");
+
+    const result = await db.insert(products).values({
       ...data,
       masterDesignCode,
       skuCode,
       skuCodedSegmented,
       skuCodedCompact,
-    };
+    }).returning();
 
-    this.products.set(id, product);
-    return product;
+    return result[0];
   }
 
   async updateProduct(id: string, data: InsertProduct): Promise<Product | undefined> {
-    if (!this.products.has(id)) return undefined;
+    const existing = await this.getProduct(id);
+    if (!existing) return undefined;
 
-    const season = this.seasons.get(data.seasonId);
-    const category = this.categories.get(data.categoryId);
-    const type = this.types.get(data.typeId);
-    const fabric = this.fabrics.get(data.fabricId);
-    const color = this.colors.get(data.colorId);
-    const style = this.styles.get(data.styleId);
-    const printType = this.printTypes.get(data.printTypeId);
-    const placement = this.placements.get(data.placementId);
-    const supplier = this.suppliers.get(data.supplierId);
-    const factory = this.factories.get(data.factoryId);
-    const size = this.sizes.get(data.sizeId);
+    const [
+      season,
+      category,
+      type,
+      fabric,
+      color,
+      style,
+      printType,
+      placement,
+      supplier,
+      factory,
+      size,
+    ] = await Promise.all([
+      this.getSeason(data.seasonId),
+      this.getCategory(data.categoryId),
+      this.getType(data.typeId),
+      this.getFabric(data.fabricId),
+      this.getColor(data.colorId),
+      this.getStyle(data.styleId),
+      this.getPrintType(data.printTypeId),
+      this.getPlacement(data.placementId),
+      this.getSupplier(data.supplierId),
+      this.getFactory(data.factoryId),
+      this.getSize(data.sizeId),
+    ]);
 
-    const masterDesignCode = `${season?.code}-${category?.code}-${type?.code}-${data.designNo}`;
-    
-    const skuCode = [
-      season?.code,
-      category?.code,
-      type?.code,
-      data.designNo,
-      fabric?.code,
-      color?.code,
-      style?.code,
-      printType?.code,
-      placement?.code,
-      supplier?.code,
-      factory?.code,
-      size?.code,
-    ].join("-");
-
-    const tokens = [
-      season?.code,
-      category?.code,
-      type?.code,
-      data.designNo,
-      fabric?.code,
-      color?.code,
-      style?.code,
-      printType?.code,
-      placement?.code,
-      supplier?.code,
-      factory?.code,
-      size?.code,
-    ];
-
-    const numericCodes: number[] = [];
-    for (const token of tokens) {
-      if (!token) continue;
-      const mapping = Array.from(this.mappingTokens.values()).find(m => m.token === token);
-      if (mapping) {
-        numericCodes.push(mapping.numericCode);
-      }
+    if (!season || !category || !type || !fabric || !color || !style || 
+        !printType || !placement || !supplier || !factory || !size) {
+      throw new Error("One or more related master data not found");
     }
 
+    const masterDesignCode = [
+      season.code,
+      category.code,
+      type.code,
+      data.designNo,
+      fabric.code,
+      color.code,
+    ].join("-");
+
+    const skuCode = [
+      season.code,
+      category.code,
+      type.code,
+      data.designNo,
+      fabric.code,
+      color.code,
+      style.code,
+      printType.code,
+      placement.code,
+      supplier.code,
+      factory.code,
+      size.code,
+    ].join("-");
+
+    const designNoNumeric = parseInt(data.designNo) || 0;
+
+    const numericCodes = [
+      season.numericCode,
+      category.numericCode,
+      type.numericCode,
+      designNoNumeric,
+      fabric.numericCode,
+      color.numericCode,
+      style.numericCode,
+      printType.numericCode,
+      placement.numericCode,
+      supplier.numericCode,
+      factory.numericCode,
+      size.numericCode,
+    ];
+
     const skuCodedSegmented = numericCodes.join("-");
-    const skuCodedCompact = numericCodes.join("");
+    const skuCodedCompact = numericCodes.map(n => n.toString().padStart(3, "0")).join("");
 
-    const product: Product = {
-      id,
-      ...data,
-      masterDesignCode,
-      skuCode,
-      skuCodedSegmented,
-      skuCodedCompact,
-    };
+    const result = await db.update(products)
+      .set({
+        ...data,
+        masterDesignCode,
+        skuCode,
+        skuCodedSegmented,
+        skuCodedCompact,
+      })
+      .where(eq(products.id, id))
+      .returning();
 
-    this.products.set(id, product);
-    return product;
+    return result[0];
   }
 
   async deleteProduct(id: string): Promise<boolean> {
-    return this.products.delete(id);
+    const result = await db.delete(products).where(eq(products.id, id)).returning();
+    return result.length > 0;
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();

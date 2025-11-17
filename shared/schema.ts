@@ -9,9 +9,10 @@ export const seasons = pgTable("seasons", {
   code: varchar("code", { length: 10 }).notNull().unique(),
   nameAr: text("name_ar").notNull(),
   nameEn: text("name_en"),
+  numericCode: integer("numeric_code").notNull().unique(),
 });
 
-export const insertSeasonSchema = createInsertSchema(seasons).omit({ id: true });
+export const insertSeasonSchema = createInsertSchema(seasons).omit({ id: true, numericCode: true });
 export type InsertSeason = z.infer<typeof insertSeasonSchema>;
 export type Season = typeof seasons.$inferSelect;
 
@@ -21,9 +22,10 @@ export const categories = pgTable("categories", {
   code: varchar("code", { length: 10 }).notNull().unique(),
   nameAr: text("name_ar").notNull(),
   nameEn: text("name_en"),
+  numericCode: integer("numeric_code").notNull().unique(),
 });
 
-export const insertCategorySchema = createInsertSchema(categories).omit({ id: true });
+export const insertCategorySchema = createInsertSchema(categories).omit({ id: true, numericCode: true });
 export type InsertCategory = z.infer<typeof insertCategorySchema>;
 export type Category = typeof categories.$inferSelect;
 
@@ -34,9 +36,10 @@ export const types = pgTable("types", {
   nameAr: text("name_ar").notNull(),
   nameEn: text("name_en"),
   categoryId: varchar("category_id"),
+  numericCode: integer("numeric_code").notNull().unique(),
 });
 
-export const insertTypeSchema = createInsertSchema(types).omit({ id: true });
+export const insertTypeSchema = createInsertSchema(types).omit({ id: true, numericCode: true });
 export type InsertType = z.infer<typeof insertTypeSchema>;
 export type Type = typeof types.$inferSelect;
 
@@ -46,9 +49,10 @@ export const fabrics = pgTable("fabrics", {
   code: varchar("code", { length: 10 }).notNull().unique(),
   nameAr: text("name_ar").notNull(),
   nameEn: text("name_en"),
+  numericCode: integer("numeric_code").notNull().unique(),
 });
 
-export const insertFabricSchema = createInsertSchema(fabrics).omit({ id: true });
+export const insertFabricSchema = createInsertSchema(fabrics).omit({ id: true, numericCode: true });
 export type InsertFabric = z.infer<typeof insertFabricSchema>;
 export type Fabric = typeof fabrics.$inferSelect;
 
@@ -59,9 +63,10 @@ export const colors = pgTable("colors", {
   hexValue: varchar("hex_value", { length: 7 }),
   nameAr: text("name_ar").notNull(),
   nameEn: text("name_en"),
+  numericCode: integer("numeric_code").notNull().unique(),
 });
 
-export const insertColorSchema = createInsertSchema(colors).omit({ id: true });
+export const insertColorSchema = createInsertSchema(colors).omit({ id: true, numericCode: true });
 export type InsertColor = z.infer<typeof insertColorSchema>;
 export type Color = typeof colors.$inferSelect;
 
@@ -71,9 +76,10 @@ export const styles = pgTable("styles", {
   code: varchar("code", { length: 10 }).notNull().unique(),
   nameAr: text("name_ar").notNull(),
   nameEn: text("name_en"),
+  numericCode: integer("numeric_code").notNull().unique(),
 });
 
-export const insertStyleSchema = createInsertSchema(styles).omit({ id: true });
+export const insertStyleSchema = createInsertSchema(styles).omit({ id: true, numericCode: true });
 export type InsertStyle = z.infer<typeof insertStyleSchema>;
 export type Style = typeof styles.$inferSelect;
 
@@ -83,9 +89,10 @@ export const printTypes = pgTable("print_types", {
   code: varchar("code", { length: 10 }).notNull().unique(),
   nameAr: text("name_ar").notNull(),
   nameEn: text("name_en"),
+  numericCode: integer("numeric_code").notNull().unique(),
 });
 
-export const insertPrintTypeSchema = createInsertSchema(printTypes).omit({ id: true });
+export const insertPrintTypeSchema = createInsertSchema(printTypes).omit({ id: true, numericCode: true });
 export type InsertPrintType = z.infer<typeof insertPrintTypeSchema>;
 export type PrintType = typeof printTypes.$inferSelect;
 
@@ -95,9 +102,10 @@ export const placements = pgTable("placements", {
   code: varchar("code", { length: 10 }).notNull().unique(),
   nameAr: text("name_ar").notNull(),
   nameEn: text("name_en"),
+  numericCode: integer("numeric_code").notNull().unique(),
 });
 
-export const insertPlacementSchema = createInsertSchema(placements).omit({ id: true });
+export const insertPlacementSchema = createInsertSchema(placements).omit({ id: true, numericCode: true });
 export type InsertPlacement = z.infer<typeof insertPlacementSchema>;
 export type Placement = typeof placements.$inferSelect;
 
@@ -107,9 +115,10 @@ export const suppliers = pgTable("suppliers", {
   code: varchar("code", { length: 10 }).notNull().unique(),
   nameAr: text("name_ar").notNull(),
   nameEn: text("name_en"),
+  numericCode: integer("numeric_code").notNull().unique(),
 });
 
-export const insertSupplierSchema = createInsertSchema(suppliers).omit({ id: true });
+export const insertSupplierSchema = createInsertSchema(suppliers).omit({ id: true, numericCode: true });
 export type InsertSupplier = z.infer<typeof insertSupplierSchema>;
 export type Supplier = typeof suppliers.$inferSelect;
 
@@ -119,9 +128,10 @@ export const factories = pgTable("factories", {
   code: varchar("code", { length: 10 }).notNull().unique(),
   nameAr: text("name_ar").notNull(),
   nameEn: text("name_en"),
+  numericCode: integer("numeric_code").notNull().unique(),
 });
 
-export const insertFactorySchema = createInsertSchema(factories).omit({ id: true });
+export const insertFactorySchema = createInsertSchema(factories).omit({ id: true, numericCode: true });
 export type InsertFactory = z.infer<typeof insertFactorySchema>;
 export type Factory = typeof factories.$inferSelect;
 
@@ -131,9 +141,10 @@ export const sizes = pgTable("sizes", {
   code: varchar("code", { length: 10 }).notNull().unique(),
   nameAr: text("name_ar").notNull(),
   nameEn: text("name_en"),
+  numericCode: integer("numeric_code").notNull().unique(),
 });
 
-export const insertSizeSchema = createInsertSchema(sizes).omit({ id: true });
+export const insertSizeSchema = createInsertSchema(sizes).omit({ id: true, numericCode: true });
 export type InsertSize = z.infer<typeof insertSizeSchema>;
 export type Size = typeof sizes.$inferSelect;
 

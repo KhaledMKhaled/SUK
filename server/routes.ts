@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { generateCSV } from "./csv-utils";
 import {
   insertSeasonSchema,
   insertCategorySchema,
@@ -601,6 +602,411 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(404).json({ message: "Product not found" });
     }
     res.status(204).send();
+  });
+
+  // Bulk Export Endpoints
+  app.get("/api/export/seasons", async (req, res) => {
+    try {
+      const seasons = await storage.getSeasons();
+      const headers = ["id", "code", "nameAr", "nameEn", "numericCode"];
+      const rows = seasons.map(s => [s.id, s.code, s.nameAr, s.nameEn, String(s.numericCode)]);
+      const csv = generateCSV(headers, rows);
+      
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.setHeader("Content-Disposition", "attachment; filename=seasons.csv");
+      res.send("\ufeff" + csv);
+    } catch (error) {
+      res.status(500).json({ message: "Export failed", error });
+    }
+  });
+
+  app.get("/api/export/categories", async (req, res) => {
+    try {
+      const categories = await storage.getCategories();
+      const headers = ["id", "code", "nameAr", "nameEn", "numericCode"];
+      const rows = categories.map(c => [c.id, c.code, c.nameAr, c.nameEn, String(c.numericCode)]);
+      const csv = generateCSV(headers, rows);
+      
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.setHeader("Content-Disposition", "attachment; filename=categories.csv");
+      res.send("\ufeff" + csv);
+    } catch (error) {
+      res.status(500).json({ message: "Export failed", error });
+    }
+  });
+
+  app.get("/api/export/types", async (req, res) => {
+    try {
+      const types = await storage.getTypes();
+      const headers = ["id", "code", "nameAr", "nameEn", "categoryId", "numericCode"];
+      const rows = types.map(t => [t.id, t.code, t.nameAr, t.nameEn, t.categoryId, String(t.numericCode)]);
+      const csv = generateCSV(headers, rows);
+      
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.setHeader("Content-Disposition", "attachment; filename=types.csv");
+      res.send("\ufeff" + csv);
+    } catch (error) {
+      res.status(500).json({ message: "Export failed", error });
+    }
+  });
+
+  app.get("/api/export/fabrics", async (req, res) => {
+    try {
+      const fabrics = await storage.getFabrics();
+      const headers = ["id", "code", "nameAr", "nameEn", "numericCode"];
+      const rows = fabrics.map(f => [f.id, f.code, f.nameAr, f.nameEn, String(f.numericCode)]);
+      const csv = generateCSV(headers, rows);
+      
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.setHeader("Content-Disposition", "attachment; filename=fabrics.csv");
+      res.send("\ufeff" + csv);
+    } catch (error) {
+      res.status(500).json({ message: "Export failed", error });
+    }
+  });
+
+  app.get("/api/export/colors", async (req, res) => {
+    try {
+      const colors = await storage.getColors();
+      const headers = ["id", "code", "nameAr", "nameEn", "hexValue", "numericCode"];
+      const rows = colors.map(c => [c.id, c.code, c.nameAr, c.nameEn, c.hexValue, String(c.numericCode)]);
+      const csv = generateCSV(headers, rows);
+      
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.setHeader("Content-Disposition", "attachment; filename=colors.csv");
+      res.send("\ufeff" + csv);
+    } catch (error) {
+      res.status(500).json({ message: "Export failed", error });
+    }
+  });
+
+  app.get("/api/export/styles", async (req, res) => {
+    try {
+      const styles = await storage.getStyles();
+      const headers = ["id", "code", "nameAr", "nameEn", "numericCode"];
+      const rows = styles.map(s => [s.id, s.code, s.nameAr, s.nameEn, String(s.numericCode)]);
+      const csv = generateCSV(headers, rows);
+      
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.setHeader("Content-Disposition", "attachment; filename=styles.csv");
+      res.send("\ufeff" + csv);
+    } catch (error) {
+      res.status(500).json({ message: "Export failed", error });
+    }
+  });
+
+  app.get("/api/export/print-types", async (req, res) => {
+    try {
+      const printTypes = await storage.getPrintTypes();
+      const headers = ["id", "code", "nameAr", "nameEn", "numericCode"];
+      const rows = printTypes.map(p => [p.id, p.code, p.nameAr, p.nameEn, String(p.numericCode)]);
+      const csv = generateCSV(headers, rows);
+      
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.setHeader("Content-Disposition", "attachment; filename=print-types.csv");
+      res.send("\ufeff" + csv);
+    } catch (error) {
+      res.status(500).json({ message: "Export failed", error });
+    }
+  });
+
+  app.get("/api/export/placements", async (req, res) => {
+    try {
+      const placements = await storage.getPlacements();
+      const headers = ["id", "code", "nameAr", "nameEn", "numericCode"];
+      const rows = placements.map(p => [p.id, p.code, p.nameAr, p.nameEn, String(p.numericCode)]);
+      const csv = generateCSV(headers, rows);
+      
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.setHeader("Content-Disposition", "attachment; filename=placements.csv");
+      res.send("\ufeff" + csv);
+    } catch (error) {
+      res.status(500).json({ message: "Export failed", error });
+    }
+  });
+
+  app.get("/api/export/suppliers", async (req, res) => {
+    try {
+      const suppliers = await storage.getSuppliers();
+      const headers = ["id", "code", "nameAr", "nameEn", "numericCode"];
+      const rows = suppliers.map(s => [s.id, s.code, s.nameAr, s.nameEn, String(s.numericCode)]);
+      const csv = generateCSV(headers, rows);
+      
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.setHeader("Content-Disposition", "attachment; filename=suppliers.csv");
+      res.send("\ufeff" + csv);
+    } catch (error) {
+      res.status(500).json({ message: "Export failed", error });
+    }
+  });
+
+  app.get("/api/export/factories", async (req, res) => {
+    try {
+      const factories = await storage.getFactories();
+      const headers = ["id", "code", "nameAr", "nameEn", "numericCode"];
+      const rows = factories.map(f => [f.id, f.code, f.nameAr, f.nameEn, String(f.numericCode)]);
+      const csv = generateCSV(headers, rows);
+      
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.setHeader("Content-Disposition", "attachment; filename=factories.csv");
+      res.send("\ufeff" + csv);
+    } catch (error) {
+      res.status(500).json({ message: "Export failed", error });
+    }
+  });
+
+  app.get("/api/export/sizes", async (req, res) => {
+    try {
+      const sizes = await storage.getSizes();
+      const headers = ["id", "code", "nameAr", "nameEn", "numericCode"];
+      const rows = sizes.map(s => [s.id, s.code, s.nameAr, s.nameEn, String(s.numericCode)]);
+      const csv = generateCSV(headers, rows);
+      
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.setHeader("Content-Disposition", "attachment; filename=sizes.csv");
+      res.send("\ufeff" + csv);
+    } catch (error) {
+      res.status(500).json({ message: "Export failed", error });
+    }
+  });
+
+  app.get("/api/export/products", async (req, res) => {
+    try {
+      const products = await storage.getProducts();
+      const headers = ["id", "seasonCode", "categoryCode", "typeCode", "designNo", "fabricCode", "colorCode", 
+                       "styleCode", "printTypeCode", "placementCode", "supplierCode", "factoryCode", "sizeCode",
+                       "productNameAr", "productNameEn", "masterDesignCode", "skuCode", "skuCodedSegmented", 
+                       "skuCodedCompact", "notes"];
+      const rows = products.map(p => [
+        p.id,
+        p.season?.code,
+        p.category?.code,
+        p.type?.code,
+        p.designNo,
+        p.fabric?.code,
+        p.color?.code,
+        p.style?.code,
+        p.printType?.code,
+        p.placement?.code,
+        p.supplier?.code,
+        p.factory?.code,
+        p.size?.code,
+        p.productNameAr,
+        p.productNameEn,
+        p.masterDesignCode,
+        p.skuCode,
+        p.skuCodedSegmented,
+        p.skuCodedCompact,
+        p.notes
+      ]);
+      const csv = generateCSV(headers, rows);
+      
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.setHeader("Content-Disposition", "attachment; filename=products.csv");
+      res.send("\ufeff" + csv);
+    } catch (error) {
+      res.status(500).json({ message: "Export failed", error });
+    }
+  });
+
+  // SKU Decode - Decode text or numeric SKU to attributes
+  app.post("/api/sku/decode", async (req, res) => {
+    try {
+      const { sku, skuType } = req.body;
+      
+      if (!sku || !skuType) {
+        return res.status(400).json({ message: "SKU and skuType are required" });
+      }
+
+      let decodedParts: string[] = [];
+      
+      if (skuType === "text") {
+        decodedParts = sku.split("-");
+      } else if (skuType === "segmented") {
+        decodedParts = sku.split("-");
+        const [seasons, categories, types, fabrics, colors, styles, printTypes, placements, suppliers, factories, sizes] = await Promise.all([
+          storage.getSeasons(),
+          storage.getCategories(),
+          storage.getTypes(),
+          storage.getFabrics(),
+          storage.getColors(),
+          storage.getStyles(),
+          storage.getPrintTypes(),
+          storage.getPlacements(),
+          storage.getSuppliers(),
+          storage.getFactories(),
+          storage.getSizes(),
+        ]);
+
+        const numericParts = decodedParts.map(p => parseInt(p));
+        const textParts = [
+          seasons.find(s => s.numericCode === numericParts[0])?.code || "",
+          categories.find(c => c.numericCode === numericParts[1])?.code || "",
+          types.find(t => t.numericCode === numericParts[2])?.code || "",
+          numericParts[3].toString(),
+          fabrics.find(f => f.numericCode === numericParts[4])?.code || "",
+          colors.find(c => c.numericCode === numericParts[5])?.code || "",
+          styles.find(s => s.numericCode === numericParts[6])?.code || "",
+          printTypes.find(p => p.numericCode === numericParts[7])?.code || "",
+          placements.find(p => p.numericCode === numericParts[8])?.code || "",
+          suppliers.find(s => s.numericCode === numericParts[9])?.code || "",
+          factories.find(f => f.numericCode === numericParts[10])?.code || "",
+          sizes.find(s => s.numericCode === numericParts[11])?.code || "",
+        ];
+        decodedParts = textParts;
+      }
+
+      if (decodedParts.length < 12) {
+        return res.status(400).json({ message: "Invalid SKU format" });
+      }
+
+      const [seasonCode, categoryCode, typeCode, designNo, fabricCode, colorCode, 
+             styleCode, printTypeCode, placementCode, supplierCode, factoryCode, sizeCode] = decodedParts;
+
+      const [season, category, type, fabric, color, style, printType, placement, supplier, factory, size] = await Promise.all([
+        (await storage.getSeasons()).find(s => s.code === seasonCode),
+        (await storage.getCategories()).find(c => c.code === categoryCode),
+        (await storage.getTypes()).find(t => t.code === typeCode),
+        (await storage.getFabrics()).find(f => f.code === fabricCode),
+        (await storage.getColors()).find(c => c.code === colorCode),
+        (await storage.getStyles()).find(s => s.code === styleCode),
+        (await storage.getPrintTypes()).find(p => p.code === printTypeCode),
+        (await storage.getPlacements()).find(p => p.code === placementCode),
+        (await storage.getSuppliers()).find(s => s.code === supplierCode),
+        (await storage.getFactories()).find(f => f.code === factoryCode),
+        (await storage.getSizes()).find(s => s.code === sizeCode),
+      ]);
+
+      const masterDesignCode = [seasonCode, categoryCode, typeCode, designNo, fabricCode, colorCode].join("-");
+      const skuCode = decodedParts.join("-");
+
+      const numericCodes = [
+        season?.numericCode || 0,
+        category?.numericCode || 0,
+        type?.numericCode || 0,
+        parseInt(designNo) || 0,
+        fabric?.numericCode || 0,
+        color?.numericCode || 0,
+        style?.numericCode || 0,
+        printType?.numericCode || 0,
+        placement?.numericCode || 0,
+        supplier?.numericCode || 0,
+        factory?.numericCode || 0,
+        size?.numericCode || 0,
+      ];
+
+      const skuCodedSegmented = numericCodes.join("-");
+      const skuCodedCompact = numericCodes.map(n => n.toString().padStart(3, "0")).join("");
+
+      const decoded = {
+        seasonCode,
+        seasonNameAr: season?.nameAr || "",
+        seasonNameEn: season?.nameEn || "",
+        categoryCode,
+        categoryNameAr: category?.nameAr || "",
+        categoryNameEn: category?.nameEn || "",
+        typeCode,
+        typeNameAr: type?.nameAr || "",
+        typeNameEn: type?.nameEn || "",
+        designNo,
+        fabricCode,
+        fabricNameAr: fabric?.nameAr || "",
+        fabricNameEn: fabric?.nameEn || "",
+        colorCode,
+        colorNameAr: color?.nameAr || "",
+        colorNameEn: color?.nameEn || "",
+        colorHex: color?.hexValue || "",
+        styleCode,
+        styleNameAr: style?.nameAr || "",
+        styleNameEn: style?.nameEn || "",
+        printTypeCode,
+        printTypeNameAr: printType?.nameAr || "",
+        printTypeNameEn: printType?.nameEn || "",
+        placementCode,
+        placementNameAr: placement?.nameAr || "",
+        placementNameEn: placement?.nameEn || "",
+        supplierCode,
+        supplierNameAr: supplier?.nameAr || "",
+        supplierNameEn: supplier?.nameEn || "",
+        factoryCode,
+        factoryNameAr: factory?.nameAr || "",
+        factoryNameEn: factory?.nameEn || "",
+        sizeCode,
+        sizeNameAr: size?.nameAr || "",
+        sizeNameEn: size?.nameEn || "",
+        masterDesignCode,
+        skuCode,
+        skuCodedSegmented,
+        skuCodedCompact,
+      };
+
+      res.json(decoded);
+    } catch (error) {
+      res.status(500).json({ message: "Decode failed", error });
+    }
+  });
+
+  // SKU Encode - Generate SKU from attributes
+  app.post("/api/sku/encode", async (req, res) => {
+    try {
+      const { seasonCode, categoryCode, typeCode, designNo, fabricCode, colorCode,
+              styleCode, printTypeCode, placementCode, supplierCode, factoryCode, sizeCode } = req.body;
+
+      if (!seasonCode || !categoryCode || !typeCode || !designNo || !fabricCode || !colorCode ||
+          !styleCode || !printTypeCode || !placementCode || !supplierCode || !factoryCode || !sizeCode) {
+        return res.status(400).json({ message: "All SKU components are required" });
+      }
+
+      const [season, category, type, fabric, color, style, printType, placement, supplier, factory, size] = await Promise.all([
+        (await storage.getSeasons()).find(s => s.code === seasonCode),
+        (await storage.getCategories()).find(c => c.code === categoryCode),
+        (await storage.getTypes()).find(t => t.code === typeCode),
+        (await storage.getFabrics()).find(f => f.code === fabricCode),
+        (await storage.getColors()).find(c => c.code === colorCode),
+        (await storage.getStyles()).find(s => s.code === styleCode),
+        (await storage.getPrintTypes()).find(p => p.code === printTypeCode),
+        (await storage.getPlacements()).find(p => p.code === placementCode),
+        (await storage.getSuppliers()).find(s => s.code === supplierCode),
+        (await storage.getFactories()).find(f => f.code === factoryCode),
+        (await storage.getSizes()).find(s => s.code === sizeCode),
+      ]);
+
+      if (!season || !category || !type || !fabric || !color || !style || 
+          !printType || !placement || !supplier || !factory || !size) {
+        return res.status(400).json({ message: "One or more master data codes not found" });
+      }
+
+      const masterDesignCode = [seasonCode, categoryCode, typeCode, designNo, fabricCode, colorCode].join("-");
+      const skuCode = [seasonCode, categoryCode, typeCode, designNo, fabricCode, colorCode,
+                       styleCode, printTypeCode, placementCode, supplierCode, factoryCode, sizeCode].join("-");
+
+      const numericCodes = [
+        season.numericCode,
+        category.numericCode,
+        type.numericCode,
+        parseInt(designNo) || 0,
+        fabric.numericCode,
+        color.numericCode,
+        style.numericCode,
+        printType.numericCode,
+        placement.numericCode,
+        supplier.numericCode,
+        factory.numericCode,
+        size.numericCode,
+      ];
+
+      const skuCodedSegmented = numericCodes.join("-");
+      const skuCodedCompact = numericCodes.map(n => n.toString().padStart(3, "0")).join("");
+
+      res.json({
+        masterDesignCode,
+        skuCode,
+        skuCodedSegmented,
+        skuCodedCompact,
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Encode failed", error });
+    }
   });
 
   const httpServer = createServer(app);
