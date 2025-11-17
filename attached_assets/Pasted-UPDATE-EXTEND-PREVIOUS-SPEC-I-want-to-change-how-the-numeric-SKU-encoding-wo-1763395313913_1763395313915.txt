@@ -1,0 +1,426 @@
+UPDATE / EXTEND PREVIOUS SPEC:
+
+I want to change how the numeric SKU encoding ("ترميز الأرقام") works.
+
+Instead of using a separate MappingToken table that I have to fill manually, I want the numeric mapping to be EMBEDDED inside each master data model and automatically generated as part of the "add" cycle of the basic info.
+
+Please apply the following changes:
+
+====================================================
+1) Embed numeric_code in each master model
+====================================================
+
+For each master model:
+
+- Season
+- Category
+- Type
+- Fabric
+- Color
+- Style
+- PrintType
+- Placement
+- Supplier
+- Factory
+- Size
+
+add a new field:
+
+- `numeric_code` (IntegerField, unique per model)
+  - This is the numeric mapping for this token.
+  - It is generated automatically when a new record is created.
+  - It must NOT be editable from forms or UI after creation (read-only).
+  - It must be stored and used later in SKU numeric encoding.
+
+So for example:
+
+### Season model:
+- `code` (e.g. "S26")
+- `name_ar`
+- `name_en`
+- `numeric_code` (auto-generated integer, e.g. 1,2,3…)
+
+### Category model:
+- `code` (e.g. "TP")
+- `name_ar`
+- `name_en`
+- `numeric_code` (auto-generated integer, e.g. 1,2,3…)
+
+…and so on for Type, Fabric, Color, Style, PrintType, Placement, Supplier, Factory, Size.
+
+====================================================
+2) Auto-generate numeric_code in the add cycle
+====================================================
+
+When I add a new basic item (for example a new Season or a new Category) via the web form:
+
+- The form should have fields for:
+  - `code` (the short token, e.g. "S28", "TP", "HO", etc.)
+  - Arabic/English names as before.
+- The `numeric_code` SHOULD NOT appear as an editable input on the form.
+- On `save()`, the backend should automatically assign the `numeric_code`:
+  - For each model, start counting from 1 up to 1000.
+  - Example:
+    - Seasons: first season gets numeric_code=1, second=2, third=3, … up to 1000.
+    - Categories: first category gets numeric_code=1, second=2, … up to 1000.
+    - Types: first type gets numeric_code=1, etc.
+  - numeric_code must be unique inside that model.
+  - If the count reaches 1000 and I try to add more items, you can either:
+    - raise a clear validation error, OR
+    - document an extension strategy (for example, allow >1000) – but **please comment clearly in the code** what you choose.
+
+Once numeric_code is assigned for a record, it must never change even if I edit the names or other fields later.
+
+In the Django admin and in custom forms:
+- Show numeric_code as read-only (display-only) if needed, but do not allow editing.
+
+====================================================
+3) Remove / adjust MappingToken usage
+====================================================
+
+Because numeric_code is now embedded in each master model:
+
+- You can remove the MappingToken model completely OR keep it only as a helper for special tokens.
+- For SKU numeric encoding, DO NOT rely on a generic MappingToken lookup anymore.
+- Instead, use the `numeric_code` from the related master objects:
+  - season.numeric_code
+  - category.numeric_code
+  - type.numeric_code
+  - fabric.numeric_code
+  - color.numeric_code
+  - style.numeric_code
+  - print_type.numeric_code
+  - placement.numeric_code
+  - supplier.numeric_code
+  - factory.numeric_code
+  - size.numeric_code
+  - plus a numeric mapping for `design_no` (you can:
+    - either store design_no as a token AND add a specific numeric_code for it,
+    - or keep design_no as-is and document how to handle it).
+
+====================================================
+4) Update SKU numeric generation (sku_coded_segmented and sku_coded_compact)
+====================================================
+
+For each Product, we still keep:
+
+- `sku_code` (text-based SKU as specified before).
+- `sku_coded_segmented` (numeric representation with "-" separator).
+- `sku_coded_compact` (pure digits).
+
+But now, when building the numeric SKU, use the embedded numeric_code instead of a separate mapping table.
+
+Example:
+
+Text SKU:
+`S26-TP-HO-2006-MLT-BLK-MIN-DTF-MDF-S1-F1-L`
+
+Assume:
+- Season(S26).numeric_code = 1
+- Category(TP).numeric_code = 2
+- Type(HO).numeric_code = 3
+- DesignNo "2006" mapped to 4 (you may implement a simple internal mapping or an auto-increment per design series)
+- Fabric(MLT).numeric_code = 5
+- Color(BLK).numeric_code = 6
+- Style(MIN).numeric_code = 7
+- PrintType(DTF).numeric_code = 8
+- Placement(MDF).numeric_code = 9
+- Supplier(S1).numeric_code = 10
+- Factory(F1).numeric_code = 11
+- Size(L).numeric_code = 12
+
+Then:
+
+- `sku_coded_segmented = "1-2-3-4-5-6-7-8-9-10-11-12"`
+
+- `sku_coded_compact = "123456789101112"` (or with zero-padding per segment, e.g. always 2 or 3 digits per segment – please choose a consistent rule and document it in comments).
+
+Make sure the Product `save()` method recomputes:
+- master_design_code
+- sku_code
+- sku_coded_segmented
+- sku_coded_compact
+on every create/update, based on the current master data and their numeric_code values.
+
+====================================================
+5) Forms and UX
+====================================================
+
+- When adding/editing master records (Season, Category, Type, etc.):
+  - The user only sees and edits: `code`, Arabic name, English name.
+  - `numeric_code` is assigned automatically and not editable.
+
+- When adding/editing a Product:
+  - User picks master data from drop-downs (showing Arabic names).
+  - The system uses their `code` and `numeric_code` behind the scenes to construct both:
+    - text SKU (`sku_code`)
+    - numeric SKUs (`sku_coded_segmented`, `sku_coded_compact`).
+
+- Admin pages can show numeric_code as a read-only field to debug or inspect, but not modify.
+
+Please update all models, views, forms, templates, and SKU helper functions accordingly.
+
+And 
+UPDATE / EXTEND PREVIOUS SPEC:
+
+I want to add BULK IMPORT / EXPORT features and MASS SKU CONVERSION that integrate with the existing Django app and models you already defined (Seasons, Categories, Types, Fabrics, Colors, Styles, Prints, Placements, Suppliers, Factories, Sizes, Products, and SKU generation logic with numeric codes).
+
+====================================================
+7) Bulk upload / download (import & export)
+====================================================
+
+I want to be able to upload and download **full bulk data** for:
+
+- All master data tables
+- Products
+- Either for:
+  - ALL items at once
+  - Or filtered by category / season / supplier / etc.
+
+All bulk operations must use **UTF-8 CSV** files (comma-separated or semicolon-separated) and must support Arabic text safely.
+
+### 7.1 General requirements
+
+- Implement bulk IMPORT and EXPORT for:
+  - Seasons
+  - Categories
+  - Types
+  - Fabrics
+  - Colors
+  - Styles
+  - PrintType
+  - Placement
+  - Suppliers
+  - Factories
+  - Sizes
+  - Products
+
+- Use CSV files with a header row.
+- Use UTF-8 encoding and handle Arabic text.
+- Validation must be robust:
+  - If there are errors, show a clear summary (line number + reason).
+  - Allow the user to cancel or confirm before applying changes if possible.
+
+- It must be efficient enough to handle **up to at least 500,000 rows** for Products (and their SKUs).
+
+### 7.2 Export (download)
+
+Create views / endpoints and simple UI screens for exporting data:
+
+- **Master data export**:
+  - One export per master table (e.g., "Download Categories CSV", "Download Fabrics CSV", etc.).
+  - Each CSV should include all columns for that model:
+    - For example, for Category: id, code, name_ar, name_en, numeric_code.
+  - Order by `id` or `code`.
+
+- **Products export**:
+  - Export all products OR filtered by:
+    - season
+    - category
+    - supplier
+    - factory
+    - fabric
+    - etc. (you may use GET parameters as filters).
+  - The Products CSV must include:
+    - product id
+    - season.code
+    - category.code
+    - type.code
+    - design_no
+    - fabric.code
+    - color.code
+    - style.code
+    - print_type.code
+    - placement.code
+    - supplier.code
+    - factory.code
+    - size.code
+    - product_name_ar
+    - product_name_en
+    - master_design_code
+    - sku_code
+    - sku_coded_segmented
+    - sku_coded_compact
+    - notes
+
+### 7.3 Import (upload)
+
+Create views / endpoints and pages for importing CSV files:
+
+- Separate import pages per entity:
+  - Import Seasons
+  - Import Categories
+  - Import Types
+  - ...
+  - Import Products
+
+- The user uploads a CSV file (UTF-8).
+- The system:
+  - parses the file in a streaming/chunked way (so it can handle up to 500K rows for Products),
+  - validates each row,
+  - shows a summary:
+    - how many rows are valid
+    - how many rows have errors (with error messages).
+
+- For master data imports:
+  - If `code` already exists → update the existing record (name_ar, name_en, etc.), but **do NOT change numeric_code**.
+  - If `code` does NOT exist → create a new record and assign a new `numeric_code` based on the auto-increment logic described earlier (start from 1,2,3,… per model).
+  - Ensure numeric_code remains unique per model.
+
+- For Products import:
+  - CSV rows may contain:
+    - SeasonCode, CategoryCode, TypeCode, DesignNo, FabricCode, ColorCode, StyleCode, PrintCode, PlacementCode, SupplierCode, FactoryCode, SizeCode, ProductNameArabic, ProductNameEnglish, Notes.
+  - For each row:
+    - Look up the related master records by their `code`.
+    - If any related record is missing, either:
+      - raise an error for that row, OR
+      - optionally create it (comment in code what behavior you implement).
+    - Create or update a Product:
+      - You can treat (`season`, `category`, `type`, `design_no`, `fabric`, `color`, `style`, `print_type`, `placement`, `supplier`, `factory`, `size`) combination as a natural key for update, or use `sku_code` if present.
+    - Automatically compute:
+      - `master_design_code`
+      - `sku_code`
+      - `sku_coded_segmented`
+      - `sku_coded_compact`
+    - Save the product.
+
+- Add clear comments on the required CSV formats and example rows.
+
+====================================================
+8) Mass SKU decoding / encoding (up to 500K SKUs)
+====================================================
+
+I need a **tool in the web app** to handle bulk conversion of SKUs for up to **500,000 rows** at once:
+
+- From textual SKU → decoded attributes + friendly name
+- From numeric SKU → decoded attributes + textual SKU
+- From attributes → generate `sku_code` + numeric SKUs
+
+### 8.1 Input / output format
+
+Use CSV for massive operations (UTF-8).
+
+Create a dedicated view (or multiple views) and templates for:
+
+1. **Bulk SKU Decode Tool**
+2. **Bulk SKU Encode Tool**
+
+Each tool supports uploading a CSV and downloading a processed CSV.
+
+#### 8.1.1 Bulk SKU Decode (from SKU to attributes)
+
+There are two types of SKU that should be supported as input:
+
+- `sku_code` (text SKU, like: `S26-TP-HO-2006-MLT-BLK-MIN-DTF-MDF-S1-F1-L`)
+- `sku_coded_segmented` (numeric with "-", like: `1-2-3-4-5-6-7-8-9-10-11-12`)
+- optionally `sku_coded_compact` (pure digits).
+
+The upload CSV should contain at least one column with one of those SKU formats.
+
+For each row:
+
+- Parse the SKU.
+- Decode it into:
+  - Season code + names
+  - Category code + names
+  - Type code + names
+  - DesignNo
+  - Fabric code + names
+  - Color code + names + hex
+  - Style code + names
+  - PrintType code + names
+  - Placement code + names
+  - Supplier code + names
+  - Factory code + names
+  - Size code + names
+  - Reconstructed:
+    - `master_design_code`
+    - `sku_code`
+    - `sku_coded_segmented`
+    - `sku_coded_compact`
+- Output a CSV with all those breakdown columns added.
+
+Use the existing models and `numeric_code` fields to decode numeric SKUs:
+- For `sku_coded_segmented` like `"1-2-3-4-5-6-7-8-9-10-11-12"`, map each number back to the correct model object based on the position:
+  - position 1 → Season.numeric_code
+  - position 2 → Category.numeric_code
+  - position 3 → Type.numeric_code
+  - position 4 → DesignNo numeric mapping (you must define how you map design numbers to numeric codes and vice versa)
+  - position 5 → Fabric.numeric_code
+  - position 6 → Color.numeric_code
+  - position 7 → Style.numeric_code
+  - position 8 → PrintType.numeric_code
+  - position 9 → Placement.numeric_code
+  - position 10 → Supplier.numeric_code
+  - position 11 → Factory.numeric_code
+  - position 12 → Size.numeric_code
+
+If a numeric part doesn't match any record, add an error column for that row.
+
+The tool must support processing up to 500,000 rows by streaming/chunking to avoid memory problems.
+
+#### 8.1.2 Bulk SKU Encode (from attributes to SKU)
+
+Another tool should support **encoding** from basic attributes to SKU.
+
+Input CSV columns can include (for each row):
+
+- SeasonCode
+- CategoryCode
+- TypeCode
+- DesignNo
+- FabricCode
+- ColorCode
+- StyleCode
+- PrintCode
+- PlacementCode
+- SupplierCode
+- FactoryCode
+- SizeCode
+- ProductNameArabic (optional)
+- ProductNameEnglish (optional)
+- Notes (optional)
+
+For each row:
+
+- Look up each master object by its `code`.
+- Use the existing SKU generation logic to build:
+  - `master_design_code`
+  - `sku_code`
+  - `sku_coded_segmented`
+  - `sku_coded_compact`
+- Output a CSV with all those SKU fields appended.
+
+Optionally:
+- If the combination already exists in the Product table, you may:
+  - attach the existing Product id, OR
+  - create/update the Product (add a flag or a mode parameter for this behavior).
+
+Again, this must support up to 500,000 rows.
+
+### 8.2 Performance considerations
+
+- Use Django streaming responses or buffered chunking to handle large files.
+- Avoid loading all rows into memory at once.
+- Use bulk operations where possible (e.g. `bulk_create`, `bulk_update`) but be careful with validation.
+- Add comments in code explaining how you handle:
+  - large file processing
+  - error reporting per row
+  - timeouts (e.g. long-running operations).
+
+====================================================
+9) Integration with existing code
+====================================================
+
+- Reuse the existing models for Season, Category, Type, Fabric, Color, Style, PrintType, Placement, Supplier, Factory, Size, Product.
+- Reuse the existing SKU generation logic in the Product model (save method or helper).
+- For bulk encoding/decoding, implement helper functions in a separate module (e.g., `sku_utils.py`) to:
+  - parse sku_code and numeric SKUs
+  - build sku_code and numeric SKUs from model instances
+  - map numeric codes back to objects using numeric_code fields.
+
+- Ensure that any future changes to SKU logic are centralized in these helpers so that:
+  - product forms
+  - bulk import/export
+  - mass SKU tools
+all stay consistent.
